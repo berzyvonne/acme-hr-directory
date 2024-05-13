@@ -12,20 +12,78 @@ const { Client } = pg
 const client = new Client(process.env.DATABASE_URL || 'postgres://localhost:5432/acme_notes_categories_db')
 
 // GET /api/employees
-app.get('/api/employees', (req, res, next) => {
+app.get('/api/employees', async (req, res, next) => {
     try {
+        const SQL = `
+            SELECT * FROM employees;
+        `
+        const response = await client.query(SQL)
+        res.send(response)
+    } catch (error) {
+        next(error)
+    }
+})
+
+// GET /api/departments
+app.get('/api/departments', async (req, res, next) => {
+    try {
+        const SQL = `
+            SELECT * FROM departments;
+        `
+        const response = await client.query(SQL)
+        res.send(response)
+    } catch (error) {
+        next(error)
+    }
+})
+
+// POST /api/employees
+app.post('/api/employees', (req, res, next) => {
+    try {
+        const SQL = `
+        INSERT into employees(txt, ranking, category_id)
+            VALUES($1, $2, $3)
+            RETURNING *;
+
+        `
+        const result = client.query(SQL, [req.body.txt, req.body.ranking, req.body.category_id])
         res.send('ok')
     } catch (error) {
         next(error)
     }
 })
-// GET /api/departments
-// POST /api/employees
+
 // PUT /api/employees/:id
+app.put('/api/employees/:id', async (req, res, next) => {
+    try {
+        const SQL = `
+        UPDATE employees
+        SET txt=$1, ranking=$2, category_id=$3, updated_at= now()
+            WHERE id=$4 RETURNING *
+        `
+        const result = await client.query(SQL, [req.body.txt, req.body.ranking, req.body.category_id, req.params.id])
+        res.send(result)
+    } catch (error) {
+        next(error)
+    }
+})
+
 // DELETE /api/employees/:id
+app.delete('/api/employees/:id', async (req, res, next) => {
+    try {
+        const SQL = `
+        DELETE from employees WHERE id = $1;
+        `
+        const result = await client.query(SQL, (req.params.id))
+        res.send('ok')
+    } catch (error) {
+        next(error)
+    }
+})
+
 
 const init = async () => {
-    await client.connect
+    await client.connect()
 
     let SQL = `
     DROP table if exists employees;
